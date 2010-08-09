@@ -1,0 +1,73 @@
+ Openinviter installation Guide.
+
+Thank you for downloading The OpenInviter General Package. This document will guide you through the installation process.
+
+A: Requirements:
+
+    Your server will need to have PHP5 installed with DOMDocument support and either cURL or WGET.
+
+ 
+
+B: Install:
+
+ 
+
+    1. Extract the contents of the openinviter.tar.gz file you have just downloaded.
+
+        Note: tar -xzvf openinviter.tar.gz
+
+ 
+
+ 
+
+ 
+
+    2. Upload the extracted files to your webserver (subfolder is highly advised).
+
+ 
+
+ 
+
+ 
+
+    3. Run postinstall.php  (http://yourdomain/openinviter_dir/postinstall.php)
+
+        
+
+        You may encounter the following errors:
+        i) The cookie storing folder if not writable. (Change the cookie folder or modify it's permisions.)
+
+        ii) Php DOM extension is not installed. (Install dom extension for php)
+
+        iii) You don't have curl or wget installed. (Install curl or wget)
+
+ 
+
+        You may encounter the following warnings:
+
+        i) A plugin does not work properly. (Your server has either a firewall or there is a connectivity error)
+
+ 
+
+        Note: You have to fix all the errors or openinviter will probably not work.
+
+        Note*: You can't run postinstall.php again for 2 minutes.
+
+    4. Edit config.php to suit your needs.
+
+ 
+
+ 
+
+    5. Delete postinstall.php
+
+ 
+
+ 
+
+ 
+
+    6. Run example.php (http://yourdomain/openinviter_dir/example.php) and try to fetch your contacts.
+
+    Note: example.php is modifiable but keep in mind the structure of the file.
+
