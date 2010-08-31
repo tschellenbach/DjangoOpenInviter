@@ -31,8 +31,8 @@ TODO
 import hashlib
 import httplib
 import zlib
-from django_open_inviter.exceptions import LoginFailed, InvalidService
-from django_open_inviter.exceptions import OpenInviterException
+from django.core.exceptions import ImproperlyConfigured
+from exceptions import LoginFailed, InvalidService, OpenInviterException
 from app_settings import USERNAME, PRIVATE_KEY
 
 
@@ -47,13 +47,27 @@ class OpenInviter(object):
     '''
     _services = None
 
-    def __init__(self):
-        self.api_domain = 'hosted.openinviter.com:80'
-        self.api_path = '/hosted/hosted.php'
-        self.services_api_path = '/hosted/services.php'
+    def __init__(self,
+                 api_domain='hosted.openinviter.com:80',
+                 api_path='/hosted/hosted.php',
+                 services_api_path='/hosted/services.php',
+                 request_format='<import>' \
+                                '<service>%(service)s</service>' \
+                                '<user>%(user)s</user>' \
+                                '<password>%(password)s</password>' \
+                                '</import>'):
+        self.api_domain = api_domain
+        self.api_path = api_path
+        self.services_api_path = services_api_path
+        self.request_format = request_format
         self.api = self.api_domain + self.api_path
 
-        self.request_format = '''<import><service>%(service)s</service><user>%(user)s</user><password>%(password)s</password></import>'''
+        # Not sure if this is the right place to check or we raise the
+        # correct exception. But it beats sending a request with empty
+        # credentials just to fail.
+        if not USERNAME or not PRIVATE_KEY:
+            raise ImproperlyConfigured('You must set OpenInviter ' \
+                                       'credentials in order to use the API.')
 
     def contacts(self, email, password):
         '''
