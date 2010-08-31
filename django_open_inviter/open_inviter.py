@@ -28,31 +28,33 @@ TODO
 
 '''
 
-from django_open_inviter import exceptions
 import hashlib
 import httplib
-import settings
 import zlib
+from django_open_inviter.exceptions import LoginFailed, InvalidService
+from django_open_inviter.exceptions import OpenInviterException
+from app_settings import USERNAME, PRIVATE_KEY
+
 
 
 
 class OpenInviter(object):
     '''
     Example usage:
-    
+
     inviter = OpenInviter()
     contacts = inviter.contacts(email, password)
     '''
     _services = None
-    
+
     def __init__(self):
         self.api_domain = 'hosted.openinviter.com:80'
         self.api_path = '/hosted/hosted.php'
         self.services_api_path = '/hosted/services.php'
         self.api = self.api_domain + self.api_path
-        
+
         self.request_format = '''<import><service>%(service)s</service><user>%(user)s</user><password>%(password)s</password></import>'''
-        
+
     def contacts(self, email, password):
         '''
         Logs the user in
@@ -60,7 +62,7 @@ class OpenInviter(object):
         >>> o = OpenInviter()
         >>> o.contacts('example@example.com', 'test')
         dunno yet
-        
+
         response
         error
         contacts
@@ -76,9 +78,9 @@ class OpenInviter(object):
         gzipped_xml = self._compress_xml(xml)
         parsed_data = self._request(self.api_path, signature, gzipped_xml)
         contact_list = self._xml_contacts_to_dict(parsed_data)
-        
+
         return contact_list
-    
+
     def services(self):
         '''
         Requests which hosted services are available at open importer
@@ -92,11 +94,11 @@ class OpenInviter(object):
             services = []
             signature = self._sign()
             data_decompressed = self._request(self.services_api_path, signature)
-            
+
             cache.set(cache_key, services)
             self._services = services
         return services
-        
+
     def _email_to_service(self, email):
         '''
         Converts thierrschellenbach@gmail.com to gmail
@@ -105,22 +107,22 @@ class OpenInviter(object):
         '''
         domain = email.split('@')[1]
         service = domain.split('.')[0].lower()
-        
+
         if service == 'live':
             service = 'hotmail'
-            
+
         return service
-        
-    
+
+
     def _request(self, path, signature, params=None):
         '''
         Common request functionality for Services and Contacts
-        
+
         - makes request
         - parses xml
         - handles errors
         '''
-        headers = {'Content-type': 'application/xml','X_USER': settings.USERNAME, 'X_SIGNATURE': signature}
+        headers = {'Content-type': 'application/xml','X_USER': USERNAME, 'X_SIGNATURE': signature}
         conn = httplib.HTTPConnection(self.api_domain)
         params_string = params or ''
         conn.request('POST', self.api_path, params_string, headers)
@@ -129,31 +131,31 @@ class OpenInviter(object):
         data_decompressed = self._decompress_xml(data).decode('utf8')
         conn.close()
         parsed_data = self._parse_data(data_decompressed)
-        
+
         if parsed_data.error != 'OK':
             self._handle_error(parsed_data.error)
-        
+
         return parsed_data
-        
+
     def _handle_error(self, error_message):
         from django.core.mail import mail_admins
         error_message = unicode(error_message)
         error_message_lower = error_message.lower()
         if 'login failed' in error_message_lower:
-            exception_class = exceptions.LoginFailed
+            exception_class = LoginFailed
         elif 'invalid service' in error_message_lower:
-            exception_class = exceptions.InvalidService
+            exception_class = InvalidService
             error_message = 'This email provider is currently not support'
             mail_admins('invalid service','error message %s for email %s' % (error_message, self.email))
         else:
-            exception_class = exceptions.OpenInviterException
+            exception_class = OpenInviterException
         raise exception_class(error_message)
-    
-    
+
+
     def _xml_contacts_to_dict(self, xmlnode):
         '''
         Takes our xml node and returns a nice format:
-        
+
         [
         {'name': 'Thierry', 'emails': ['example@example.com', 'anotheremailhere.com']}
         {'name': 'Thierry', 'emails': ['example@example.com', 'anotheremailhere.com']}
@@ -167,20 +169,20 @@ class OpenInviter(object):
             name = unicode(contact.name)
             email = unicode(contact.email)
             user_accounts_dict[name].append(email)
-            
+
         for name, emails in user_accounts_dict.items():
             user_dict = dict(emails=emails, name=name)
             contact_list.append(user_dict)
-            
+
         contact_list.sort(key=lambda x: x['name'])
-        
+
         return contact_list
-    
- 
+
+
     def _format_request(self, service, user, password):
         '''
         Formats the xml command with the given parameters
-        
+
         Test:
         >>> o = OpenInviter()
         >>> o._format_request('gmail', 'test', 'test')
@@ -188,39 +190,39 @@ class OpenInviter(object):
         '''
         formating_dict = locals()
         return self.request_format % formating_dict
-    
 
-    
+
+
     def _compress_xml(self, xml):
         return zlib.compress(xml, 9)
-    
+
     def _decompress_xml(self, xml):
         return zlib.decompress(xml)
-    
+
     def _parse_data(self, datastring):
         from lxml import objectify
         tree = objectify.fromstring(datastring)
         return tree
-    
+
     def _sign(self, xml=None):
         '''
         Signs the xml with a double md5
-        
+
         Based on this php example
         'X_SIGNATURE'=>md5(md5($this->settings['private_key']).$xml)
         'X_SIGNATURE'=>md5(md5($this->settings['private_key']).$this->settings['username'])
         '''
-        private_key_hash = hashlib.md5(settings.PRIVATE_KEY).hexdigest()
+        private_key_hash = hashlib.md5(PRIVATE_KEY).hexdigest()
         if xml:
             additional_content = xml
         else:
-            additional_content = settings.USERNAME
-        
+            additional_content = USERNAME
+
         response_combined = private_key_hash + additional_content
         hash = hashlib.md5(response_combined).hexdigest()
-        
+
         return hash
-    
+
 
 
 '''
@@ -241,10 +243,10 @@ class OpenInviter(object):
         return $plugins;
         }
 '''
-    
-        
-    
-    
+
+
+
+
 if __name__ == '__main__':
     import os
     os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
