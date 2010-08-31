@@ -10,7 +10,7 @@ EMAIL_INVALID_SERVICES = True
 
 try:
     #have the option of overriding these
-    #great for when im working on fashiolista 
+    #great for when im working on fashiolista
     #and dont want to share this data with the rest of the world
     from local_settings import *
 except ImportError, e:
