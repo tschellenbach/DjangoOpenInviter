@@ -87,6 +87,8 @@ class OpenInviter(object):
         self.password = password
         self.email = email
         service = self._email_to_service(email)
+        if service == 'rediff':
+            email = email.split('@')[0]
         xml = self._format_request(service, email, password)
         signature = self._sign(xml)
         gzipped_xml = self._compress_xml(xml)
