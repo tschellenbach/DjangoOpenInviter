@@ -31,6 +31,7 @@ TODO
 import hashlib
 import httplib
 import zlib
+import phpserialize
 from django.core.exceptions import ImproperlyConfigured
 from exceptions import LoginFailed, InvalidService, OpenInviterException
 from app_settings import USERNAME, PRIVATE_KEY
@@ -69,7 +70,7 @@ class OpenInviter(object):
             raise ImproperlyConfigured('You must set OpenInviter ' \
                                        'credentials in order to use the API.')
 
-    def contacts(self, email, password):
+    def contacts(self, email, password, service = False):
         '''
         Logs the user in
         Test:
@@ -86,7 +87,8 @@ class OpenInviter(object):
         '''
         self.password = password
         self.email = email
-        service = self._email_to_service(email)
+        if service == False:
+            service = self._email_to_service(email)
         xml = self._format_request(service, email, password)
         signature = self._sign(xml)
         gzipped_xml = self._compress_xml(xml)
@@ -105,9 +107,8 @@ class OpenInviter(object):
         cache_key = 'open_inviter_services'
         services = getattr(self, '_services') or cache.get(cache_key)
         if not services:
-            services = []
             signature = self._sign()
-            data_decompressed = self._request(self.services_api_path, signature)
+            services = self._request(self.services_api_path, signature, result='php')
 
             cache.set(cache_key, services)
             self._services = services
@@ -128,7 +129,7 @@ class OpenInviter(object):
         return service
 
 
-    def _request(self, path, signature, params=None):
+    def _request(self, path, signature, params=None, result='xml'):
         '''
         Common request functionality for Services and Contacts
 
@@ -136,18 +137,24 @@ class OpenInviter(object):
         - parses xml
         - handles errors
         '''
+
         headers = {'Content-type': 'application/xml','X_USER': USERNAME, 'X_SIGNATURE': signature}
         conn = httplib.HTTPConnection(self.api_domain)
         params_string = params or ''
-        conn.request('POST', self.api_path, params_string, headers)
+        conn.request('POST', path, params_string, headers)
         response = conn.getresponse()
         data = response.read()
-        data_decompressed = self._decompress_xml(data).decode('utf8')
         conn.close()
-        parsed_data = self._parse_data(data_decompressed)
 
-        if parsed_data.error != 'OK':
-            self._handle_error(parsed_data.error)
+        if result == 'xml':
+            data_decompressed = self._decompress_xml(data).decode('utf8')
+            parsed_data = self._parse_data(data_decompressed)
+
+            if parsed_data.error != 'OK':
+                self._handle_error(parsed_data.error)
+
+        if result == 'php':
+            parsed_data = phpserialize.loads(data)
 
         return parsed_data
 
