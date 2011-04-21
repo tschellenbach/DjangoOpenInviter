@@ -1,0 +1,33 @@
+<html>
+<body style="font-family: Arial; font-size: 12px">
+
+Please enter the login data and choose the server from which you want to import contacts. This is an demo application. No mails are send to contacts.
+
+<form action="?" method="POST">
+  <table>
+  {{ form.as_table }}
+  <tr><td></td><td><input type="submit"></td></tr>
+  </table>
+</form>
+
+{% if contacts %}
+<br>
+<br><b>Result:</b>
+
+{% for contact in contacts %}
+<table border="1">
+  <tr>
+    <td>Name</td>
+    <td>E-Mail</td>
+  </tr>  
+  <tr>
+    <td>{{ contact.name }}</td>
+    <td>{{ contact.emails|join:"," }}</td>
+  </tr>
+</table>
+{% endfor %}
+
+{% endif %}
+
+</body>
+</html>

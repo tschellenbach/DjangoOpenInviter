@@ -40,6 +40,5 @@ Hosted API
 TODO
 ^^^^
 
-- Can't get hosted services lookup to work (`services()` function)
 - Contacts and services for a function name is ugly... import_contacts
   might be better
