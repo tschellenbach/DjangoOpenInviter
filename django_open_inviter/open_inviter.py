@@ -29,11 +29,13 @@ TODO
 '''
 import hashlib
 import httplib
-import zlib
+import time
 import phpserialize
+import zlib
 from django.core.exceptions import ImproperlyConfigured
-from exceptions import LoginFailed, InvalidService, OpenInviterException
 from app_settings import ACCOUNTS
+from exceptions import LoginFailed, InvalidService, OpenInviterException
+
 
 
 class OpenInviter(object):
@@ -116,7 +118,7 @@ class OpenInviter(object):
         return services
 
     def _get_account(self):
-        return ACCOUNTS[0]
+        return ACCOUNTS[int(time.time()) % len(ACCOUNTS)]
 
     def _email_to_service(self, email):
         '''
