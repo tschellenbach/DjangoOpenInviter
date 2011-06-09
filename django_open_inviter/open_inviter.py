@@ -27,16 +27,13 @@ TODO
 - contacts and services for a function name is ugly... import_contacts might be beter
 
 '''
-
 import hashlib
 import httplib
 import zlib
 import phpserialize
 from django.core.exceptions import ImproperlyConfigured
 from exceptions import LoginFailed, InvalidService, OpenInviterException
-from app_settings import USERNAME, PRIVATE_KEY
-
-
+from app_settings import ACCOUNTS
 
 
 class OpenInviter(object):
@@ -66,7 +63,7 @@ class OpenInviter(object):
         # Not sure if this is the right place to check or we raise the
         # correct exception. But it beats sending a request with empty
         # credentials just to fail.
-        if not USERNAME or not PRIVATE_KEY:
+        if not ACCOUNTS:
             raise ImproperlyConfigured('You must set OpenInviter ' \
                                        'credentials in order to use the API.')
 
@@ -87,6 +84,7 @@ class OpenInviter(object):
         '''
         self.password = password
         self.email = email
+        self.oi_username, self.oi_private_key = self._get_account()
         if service == False:
             service = self._email_to_service(email)
         if service == 'rediff':
@@ -105,6 +103,7 @@ class OpenInviter(object):
         >>> o = OpenInviter()
         >>> o.services()
         '''
+        self.oi_username, self.oi_private_key = self._get_account()
         from django.core.cache import cache
         cache_key = 'open_inviter_services'
         services = getattr(self, '_services') or cache.get(cache_key)
@@ -115,6 +114,9 @@ class OpenInviter(object):
             cache.set(cache_key, services)
             self._services = services
         return services
+
+    def _get_account(self):
+        return ACCOUNTS[0]
 
     def _email_to_service(self, email):
         '''
@@ -140,7 +142,7 @@ class OpenInviter(object):
         - handles errors
         '''
 
-        headers = {'Content-type': 'application/xml','X_USER': USERNAME, 'X_SIGNATURE': signature}
+        headers = {'Content-type': 'application/xml','X_USER': self.oi_username, 'X_SIGNATURE': signature}
         conn = httplib.HTTPConnection(self.api_domain)
         params_string = params or ''
         conn.request('POST', path, params_string, headers)
@@ -235,11 +237,11 @@ class OpenInviter(object):
         'X_SIGNATURE'=>md5(md5($this->settings['private_key']).$xml)
         'X_SIGNATURE'=>md5(md5($this->settings['private_key']).$this->settings['username'])
         '''
-        private_key_hash = hashlib.md5(PRIVATE_KEY).hexdigest()
+        private_key_hash = hashlib.md5(self.oi_private_key).hexdigest()
         if xml:
             additional_content = xml
         else:
-            additional_content = USERNAME
+            additional_content = self.oi_username
 
         response_combined = private_key_hash + additional_content
         hash = hashlib.md5(response_combined).hexdigest()
